@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# Load configuration
+. /etc/rc.conf
+
+if [ "$PREVLEVEL" = "2" ]; then
+	# Stopping services reversely
+	if [ "${SERVICES[*]}" ]; then
+		for service in "${SERVICES[@]}"; do
+			R_SERVICES=($service ${R_SERVICES[@]})
+		done
+		echo "Stopping service:"
+		for service in "${R_SERVICES[@]}"; do
+			/etc/rc.d/$service stop
+		done
+	fi
+fi
+
+echo "Sending all processes the TERM signal..."
+/sbin/killall5 -15
+sleep 1
+
+echo "Sending all processes the KILL signal..."
+/sbin/killall5 -9
+sleep 1
+
+echo "Deactivating swap partitions..."
+/sbin/swapoff -a
+
+echo "Saving random seed to a temporary file..."
+/bin/dd if=/dev/urandom of=/etc/random-seed count=1 bs=512 2>/dev/null
+
+echo "Saving the system time to hardware clock..."
+case "$CLOCK" in
+	utc|UTC)
+		/sbin/hwclock --systohc --utc
+	;;
+	localtime|LOCALTIME)
+		/sbin/hwclock --systohc
+	;;
+esac
+
+# Write to wtmp file before unmounting
+/sbin/halt -w
+
+echo "Unmounting remote filesystems..."
+umount -a -d -r -t notmpfs,nosysfs,nodevtmpfs,noproc,nodevpts
+
+echo "Remounting root filesystem read-only..."
+/bin/mount -n -o remount,ro /
+
+echo "Flushing filesystem buffers..."
+/bin/sync
+
+# Power off or reboot
+if [ "$RUNLEVEL" = "0" ]; then
+	/sbin/poweroff -d -f -i
+else
+	/sbin/reboot -d -f -i
+fi
+
+# End of file

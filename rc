@@ -1,0 +1,142 @@
+#!/bin/sh
+
+echo "Start up system..."
+
+# Load configuration
+. /etc/rc.conf
+
+# Make sure /run is available before logging any messages
+/bin/mount /run
+
+/bin/mkdir -p /run/lock /run/shm
+/bin/chmod 1777 /run/shm /run/lock
+
+echo "Mounting virtual file systems..."
+/bin/mountpoint -q /proc || /bin/mount -o nosuid,noexec,nodev /proc
+/bin/mountpoint -q /sys || /bin/mount -o nosuid,noexec,nodev /sys
+/bin/mountpoint -q /dev || /bin/mount -o mode=0755,nosuid /dev
+
+ln -sfn /run/shm /dev/shm
+
+# Modprobe modules
+if [ "${#MODULES[@]}" -gt 0 ]; then
+	echo "Modprobe modules..."
+	for modules in ${MODULES[@]}; do
+		/sbin/modprobe $modules || echo "[ERROR] $modules"
+	done
+fi
+
+# Start the udev daemon
+/sbin/udevd --daemon
+
+# Now traverse /sys in order to "coldplug" devices that have
+# already been discovered
+/sbin/udevadm trigger --action=add    --type=subsystems
+/sbin/udevadm trigger --action=add    --type=devices
+/sbin/udevadm trigger --action=change --type=devices
+/sbin/udevadm settle
+
+# If any LVM based partitions are on the system, ensure they
+# are activated so they can be used.
+if [ -x /sbin/vgchange ]; then 
+	/sbin/vgchange -a y >/dev/null
+fi 
+
+# Enable swap
+echo "Activating all swap files/partitions..."
+/sbin/swapon -a
+
+echo "Mounting root file system in read-only mode... "
+/bin/mount -n -o remount,ro /
+
+/sbin/fsck -A -a -C
+if [ $? -gt 1 ]; then
+   echo
+   echo "ERROR:"
+   echo "Your filesystem has been severely damaged. You can probably correct this"
+   echo "problem by running e2fsck manually (eg. with the -v and -y options). After"
+   echo "you logout, the system will reboot."
+   echo
+   PS1="(Repair filesystem)# "
+   export PS1
+   /sbin/sulogin
+   /bin/umount -a -r
+   /sbin/reboot -f
+fi
+
+echo "Remounting root file system in read-write mode..."
+/bin/mount --options remount,rw /
+
+# Make sure /dev/pts exists
+/bin/mkdir -p /dev/pts
+
+echo "Mounting remaining file systems..."
+/bin/mount -a
+
+echo "Setting up utmp..."
+/usr/bin/touch /var/run/utmp
+if grep -q '^utmp:' /etc/group; then
+  /bin/chmod 664 /var/run/utmp
+  /bin/chgrp utmp /var/run/utmp
+fi
+
+# Clean /tmp directory
+/bin/rm -fr /tmp/*
+
+if [ -f "/etc/random-seed" ]; then
+  echo "Initializing random number generator..."
+  /bin/cat /etc/random-seed >/dev/urandom
+  /bin/rm -f /etc/random-seed
+fi
+
+echo "Bringing up the loopback interface..."
+ip addr add 127.0.0.1/8 label lo dev lo
+ip link set lo up
+
+# Configure system clock
+if [ "$TIMEZONE" ]; then
+	/bin/ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+fi
+
+echo "Setting system time from hardware clock..."
+case "$CLOCK" in
+	utc|UTC)
+		/sbin/hwclock --hctosys --utc &
+	;;
+	localtime|LOCALTIME)
+		/sbin/hwclock --hctosys &
+	;;
+esac
+
+# Load console font
+if [ "$FONT" ] && [ "$FONT" != "default" ]; then
+	echo "font: $FONT"
+	/usr/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
+fi
+
+# Load console keymap
+if [ "$KEYMAP" ]; then
+	echo "keyboard: $KEYMAP"
+	/usr/bin/loadkeys -q $KEYMAP
+fi
+
+HOSTNAME=`cat /etc/hostname`
+echo "Setting hostname to ${HOSTNAME}..."
+/bin/hostname ${HOSTNAME}
+
+if [ -f "/etc/sysctl.conf" ]; then
+	echo "Setting kernel runtime parameters..."
+	/sbin/sysctl -q -p
+fi
+
+echo "Starting system and kernel log daemons...."
+/sbin/syslogd
+/sbin/klogd -c3
+
+echo "Updating module dependencies..."
+/sbin/depmod -a
+
+# Save boot messages
+/bin/dmesg > /var/log/boot
+
+# End of file

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Load configuration
+. /etc/rc.conf
+
+if [ "$PREVLEVEL" = "2" ]; then
+	# Stopping services reversely
+	if [ "${SERVICES[*]}" ]; then
+		for service in "${SERVICES[@]}"; do
+			R_SERVICES=($service ${R_SERVICES[@]})
+		done
+		echo "Stopping service:"
+		for service in "${R_SERVICES[@]}"; do
+			/etc/rc.d/$service stop
+		done
+	fi
+fi
+
+echo "Sending all processes the TERM signal..."
+/sbin/killall5 -15
+sleep 1
+
+echo "Sending all processes the KILL signal..."
+/sbin/killall5 -9

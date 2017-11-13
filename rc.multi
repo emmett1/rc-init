@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Load configuration
+. /etc/rc.conf
+
+# Start service
+if [ "${#SERVICES[@]}" -gt 0 ]; then
+	echo "Starting service:"
+	for service in ${SERVICES[@]}; do
+		/etc/rc.d/$service start
+	done
+fi
+
+# Run local startup script
+if [ -x /etc/rc.local ]; then
+	/etc/rc.local
+fi
+
+# End of file

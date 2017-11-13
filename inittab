@@ -1,0 +1,28 @@
+#
+# /etc/inittab: system runlevel description
+#
+#  Runlevels:
+#  0	Halt
+#  1(S)	Single-user
+#  2	Multi-user
+#  3-5	Not used
+#  6	Reboot
+
+id:2:initdefault:
+
+si::sysinit:/etc/rc
+
+l1:S1:wait:/etc/rc.single
+l2:2:wait:/etc/rc.multi
+l6:06:wait:/etc/rc.shutdown
+
+ca:12345:ctrlaltdel:/sbin/shutdown -t1 -r now
+
+su:S1:respawn:/sbin/sulogin
+
+c1:2345:respawn:/sbin/agetty --noclear tty1 38400 linux
+c2:2345:respawn:/sbin/agetty --noclear tty2 38400 linux
+c3:2345:respawn:/sbin/agetty --noclear tty3 38400 linux
+c4:2345:respawn:/sbin/agetty --noclear tty4 38400 linux
+c5:2345:respawn:/sbin/agetty --noclear tty5 38400 linux
+c6:2345:respawn:/sbin/agetty --noclear tty6 38400 linux
