@@ -5,7 +5,7 @@
 
 PROG=/usr/bin/foo
 PROGNAME=$(basename `echo $PROG`)
-PIDFILE=/var/run/PROGNAME.pid
+PIDFILE=/var/run/$PROGNAME.pid
 OPTS="--background"
 PROCPID=$(pidof $PROGNAME)
 
