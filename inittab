@@ -1,5 +1,5 @@
 #
-# /etc/inittab: system runlevel description
+# /etc/inittab: System runlevel description
 #
 #  Runlevels:
 #  0	Halt
@@ -8,13 +8,13 @@
 #  3-5	Not used
 #  6	Reboot
 
-id:2:initdefault:
+id:5:initdefault:
 
-si::sysinit:/etc/rc
+si::sysinit:/etc/rc.sysinit
 
-l1:S1:wait:/etc/rc.single
-l2:2:wait:/etc/rc.multi
-l6:06:wait:/etc/rc.shutdown
+rs:S1:wait:/etc/rc.single
+rm:2345:wait:/etc/rc.multi
+rh:06:wait:/etc/rc.shutdown
 
 ca:12345:ctrlaltdel:/sbin/shutdown -t1 -r now
 
