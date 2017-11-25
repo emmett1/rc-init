@@ -28,8 +28,8 @@ case $1 in
 		rm -f $PIDFILE
         ;;
 	restart)
-        $0 stop
-        $0 start
+		$0 stop
+		$0 start
         ;;
 	status)
 		if [ "$PROCPID" ]; then
@@ -39,7 +39,7 @@ case $1 in
 		fi
 		;;
 	*)
-        echo "usage: $0 [start|stop|restart|status]"
+		echo "usage: $0 [start|stop|restart|status]"
         ;;
 esac
 
