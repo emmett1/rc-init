@@ -35,7 +35,7 @@ case "$CLOCK" in
 	utc|UTC)
 		/sbin/hwclock --systohc --utc
 	;;
-	localtime|LOCALTIME)
+	local|localtime|LOCALTIME)
 		/sbin/hwclock --systohc
 	;;
 esac

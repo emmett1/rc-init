@@ -100,7 +100,7 @@ case "$CLOCK" in
 	utc|UTC)
 		/sbin/hwclock --hctosys --utc &
 	;;
-	localtime|LOCALTIME)
+	local|localtime|LOCALTIME)
 		/sbin/hwclock --hctosys &
 	;;
 esac
