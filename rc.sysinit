@@ -1,9 +1,8 @@
 #!/bin/sh
 
-echo "Start up system..."
-
-# Load configuration
+# Load configuration and functions
 . /etc/rc.conf
+. /etc/conf.d/functions
 
 # Make sure /run is available before logging any messages
 /bin/mount /run
@@ -11,22 +10,34 @@ echo "Start up system..."
 /bin/mkdir -p /run/lock /run/shm
 /bin/chmod 1777 /run/shm /run/lock
 
-echo "Mounting virtual file systems..."
+msg "Mounting virtual file systems..."
+echo -ne " ${GREEN}/proc${NORM}"
 /bin/mountpoint -q /proc || /bin/mount -o nosuid,noexec,nodev /proc
+echo -ne ", ${GREEN}/sys${NORM}"
 /bin/mountpoint -q /sys || /bin/mount -o nosuid,noexec,nodev /sys
+echo -e ", ${GREEN}/dev${NORM}"
 /bin/mountpoint -q /dev || /bin/mount -o mode=0755,nosuid /dev
 
 ln -sfn /run/shm /dev/shm
 
-# Modprobe modules
-if [ "${#MODULES[@]}" -gt 0 ]; then
-	echo "Modprobe modules..."
-	for modules in ${MODULES[@]}; do
-		/sbin/modprobe $modules || echo "[ERROR] $modules"
-	done
+# Makes changes to the proc filesystem
+if [ -f "/etc/sysctl.conf" ]; then
+	msg "Setting kernel runtime parameters..."
+	/sbin/sysctl -q -p
+	check_retval
 fi
 
-# Start the udev daemon
+# Loads required modules
+if [ "${#MODULES[@]}" -gt 0 ]; then
+	msg "Loading modules..."
+	for modules in ${MODULES[@]}; do
+		/sbin/modprobe $modules 2>/dev/null && echo -ne " ${BLUE}$modules${NORM}" || echo -ne " ${RED}$modules${NORM}"
+	done
+	stat_done
+fi
+
+# Populates /dev with device nodes
+msg "Populating /dev with device nodes..."
 /sbin/udevd --daemon
 
 # Now traverse /sys in order to "coldplug" devices that have
@@ -35,6 +46,7 @@ fi
 /sbin/udevadm trigger --action=add    --type=devices
 /sbin/udevadm trigger --action=change --type=devices
 /sbin/udevadm settle
+check_retval
 
 # If any LVM based partitions are on the system, ensure they
 # are activated so they can be used.
@@ -43,14 +55,30 @@ if [ -x /sbin/vgchange ]; then
 fi 
 
 # Enable swap
-echo "Activating all swap files/partitions..."
+msg "Activating all swap files/partitions..."
 /sbin/swapon -a
+check_retval
 
-echo "Mounting root file system in read-only mode... "
+msg "Setting hardware clock..."
+case "$CLOCK" in
+	UTC|utc)
+		echo -ne " ${BLUE}utc${NORM}"
+		/sbin/hwclock --hctosys --utc
+	;;
+	LOCAL|local|LOCALTIME|localtime)
+		echo -ne " ${BLUE}localtime${NORM}"
+		/sbin/hwclock --hctosys --localtime
+	;;
+esac
+check_retval
+
+msg "Mounting root file system in read-only mode..."
 /bin/mount -n -o remount,ro /
+check_retval
 
-/sbin/fsck -A -a -C
-if [ $? -gt 1 ]; then
+msg "Checking filesystems..."
+/sbin/fsck -A -a -C -T >/dev/null
+if [ $? -gt 0 ]; then
    echo
    echo "ERROR:"
    echo "Your filesystem has been severely damaged. You can probably correct this"
@@ -62,82 +90,78 @@ if [ $? -gt 1 ]; then
    /sbin/sulogin
    /bin/umount -a -r
    /sbin/reboot -f
+else
+	stat_done
 fi
 
-echo "Remounting root file system in read-write mode..."
+msg "Remounting root file system in read-write mode..."
 /bin/mount --options remount,rw /
+check_retval
 
 # Make sure /dev/pts exists
 /bin/mkdir -p /dev/pts
 
-echo "Mounting remaining file systems..."
-/bin/mount -a
+msg "Mounting remaining file systems..."
+mount --all --test-opts no_netdev >/dev/null
+check_retval
 
-echo "Setting up utmp..."
+# Clean filesystem
+msg "Cleaning file systems..."
+/bin/rm -fr /tmp/*
+
 /usr/bin/touch /var/run/utmp
 if grep -q '^utmp:' /etc/group; then
   /bin/chmod 664 /var/run/utmp
   /bin/chgrp utmp /var/run/utmp
 fi
+check_retval
 
-if [ -f "/etc/random-seed" ]; then
-  echo "Initializing random number generator..."
-  /bin/cat /etc/random-seed >/dev/urandom
-  /bin/rm -f /etc/random-seed
+#msg "Setting up Linux console..."
+if [ "$FONT" ] && [ "$FONT" != "default" ]; then
+	msg "Setting font to ${BLUE}$FONT${NORM}"
+	/usr/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
+	check_retval
+fi
+if [ "$KEYMAP" ]; then
+	msg "Setting keyboard to ${BLUE}$KEYMAP${NORM}"
+	/usr/bin/loadkeys -q $KEYMAP
+	check_retval
 fi
 
-echo "Bringing up the loopback interface..."
+msg "Bringing up the loopback interface..."
 ip addr add 127.0.0.1/8 label lo dev lo
 ip link set lo up
-
-# Configure system clock
-if [ "$TIMEZONE" ]; then
-	/bin/ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-fi
-
-echo "Setting system time from hardware clock..."
-case "$CLOCK" in
-	utc|UTC)
-		/sbin/hwclock --hctosys --utc &
-	;;
-	local|localtime|LOCALTIME)
-		/sbin/hwclock --hctosys &
-	;;
-esac
-
-if [ -f "/etc/sysctl.conf" ]; then
-	echo "Setting kernel runtime parameters..."
-	/sbin/sysctl -q -p
-fi
-
-echo "Starting system and kernel log daemons...."
-/sbin/syslogd
-/sbin/klogd -c3
-
-echo "Updating module dependencies..."
-/sbin/depmod -a
-
-# Clean /tmp directory
-echo "Cleaning /tmp directory..."
-/bin/rm -fr /tmp/*
+check_retval
 
 HOSTNAME=`cat /etc/hostname`
-echo "Setting hostname to ${HOSTNAME}"
+msg "Setting hostname to ${BLUE}${HOSTNAME}${NORM}"
 /bin/hostname ${HOSTNAME}
+check_retval
 
-# Load console font
-if [ "$FONT" ] && [ "$FONT" != "default" ]; then
-	echo "Setting font to $FONT"
-	/usr/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
+msg "Starting system log daemons..."
+/sbin/syslogd
+check_retval
+
+msg "Starting kernel log daemon..."
+/sbin/klogd -c3
+check_retval
+
+if [ -f "/etc/random-seed" ]; then
+  msg "Initializing random number generator..."
+  /bin/cat /etc/random-seed >/dev/urandom
+  /bin/rm -f /etc/random-seed
+  check_retval
 fi
 
-# Load console keymap
-if [ "$KEYMAP" ]; then
-	echo "Setting keyboard to $KEYMAP"
-	/usr/bin/loadkeys -q $KEYMAP
+# Configure system timezone
+if [ "$TIMEZONE" ]; then
+	msg "Setting timezone to ${BLUE}$TIMEZONE${NORM}"
+	/bin/ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+	check_retval
 fi
 
-# Save boot messages
-/bin/dmesg > /var/log/boot
+msg "Updating module dependencies..."
+/sbin/depmod -a
+check_retval
 
 # End of file

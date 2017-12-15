@@ -1,56 +1,65 @@
 #!/bin/sh
 
-# Load configuration
+# Load configuration and functions
 . /etc/rc.conf
+. /etc/conf.d/functions
 
 if [ "$PREVLEVEL" = "2" ]; then
-	# Stopping services reversely
-	if [ "${SERVICES[*]}" ]; then
-		for service in "${SERVICES[@]}"; do
-			R_SERVICES=($service ${R_SERVICES[@]})
+	# Stopping daemons reversely
+	if [ "${DAEMONS[*]}" ]; then
+		for daemon in "${DAEMONS[@]}"; do
+			R_DAEMONS=($daemon ${R_DAEMONS[@]})
 		done
-		echo "Stopping service:"
-		for service in "${R_SERVICES[@]}"; do
-			/etc/rc.d/$service stop
+		echo "Stopping daemon:"
+		for daemon in "${R_DAEMONS[@]}"; do
+			/etc/rc.d/$daemon stop
 		done
 	fi
 fi
 
-echo "Sending all processes the TERM signal..."
+msg "Sending all processes the TERM signal..."
 /sbin/killall5 -15
+check_retval
 sleep 1
 
-echo "Sending all processes the KILL signal..."
+msg "Sending all processes the KILL signal..."
 /sbin/killall5 -9
+check_retval
 sleep 1
 
-echo "Deactivating swap partitions..."
+msg "Deactivating swap partitions..."
 /sbin/swapoff -a
+check_retval
 
-echo "Saving random seed to a temporary file..."
+msg "Saving random seed to a temporary file..."
 /bin/dd if=/dev/urandom of=/etc/random-seed count=1 bs=512 2>/dev/null
+check_retval
 
-echo "Saving the system time to hardware clock..."
+msg "Saving the system time to hardware clock..."
 case "$CLOCK" in
 	utc|UTC)
 		/sbin/hwclock --systohc --utc
 	;;
-	local|localtime|LOCALTIME)
-		/sbin/hwclock --systohc
+	LOCAL|local|LOCALTIME|localtime)
+		/sbin/hwclock --systohc --localtime
 	;;
 esac
+check_retval
 
 # Write to wtmp file before unmounting
 /sbin/halt -w
 
-echo "Unmounting remote filesystems..."
+msg "Unmounting remote filesystems..."
 umount -a -d -r -t notmpfs,nosysfs,nodevtmpfs,noproc,nodevpts
+check_retval
 
-echo "Remounting root filesystem read-only..."
+msg "Remounting root filesystem read-only..."
 /bin/mount -n -o remount,ro /
+check_retval
 
-echo "Flushing filesystem buffers..."
+msg "Flushing filesystem buffers..."
 /bin/sync
+check_retval
 
 # Power off or reboot
 if [ "$RUNLEVEL" = "0" ]; then

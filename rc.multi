@@ -1,13 +1,14 @@
 #!/bin/sh
 
-# Load configuration
+# Load configuration and functions
 . /etc/rc.conf
+. /etc/conf.d/functions
 
-# Start service
-if [ "${#SERVICES[@]}" -gt 0 ]; then
-	echo "Starting service:"
-	for service in ${SERVICES[@]}; do
-		/etc/rc.d/$service start
+# Start daemons
+if [ "${#DAEMONS[@]}" -gt 0 ]; then
+	echo "Starting daemons:"
+	for daemon in ${DAEMONS[@]}; do
+		/etc/rc.d/$daemon start
 	done
 fi
 
