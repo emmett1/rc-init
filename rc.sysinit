@@ -2,7 +2,11 @@
 
 # Load configuration and functions
 . /etc/rc.conf
-. /etc/conf.d/functions
+#. /etc/conf.d/functions
+
+msg() {
+	echo " * $@"
+}
 
 # Make sure /run is available before logging any messages
 /bin/mount /run
@@ -11,11 +15,8 @@
 /bin/chmod 1777 /run/shm /run/lock
 
 msg "Mounting virtual file systems..."
-echo -ne " ${GREEN}/proc${NORM}"
 /bin/mountpoint -q /proc || /bin/mount -o nosuid,noexec,nodev /proc
-echo -ne ", ${GREEN}/sys${NORM}"
 /bin/mountpoint -q /sys || /bin/mount -o nosuid,noexec,nodev /sys
-echo -e ", ${GREEN}/dev${NORM}"
 /bin/mountpoint -q /dev || /bin/mount -o mode=0755,nosuid /dev
 
 ln -sfn /run/shm /dev/shm
@@ -24,16 +25,14 @@ ln -sfn /run/shm /dev/shm
 if [ -f "/etc/sysctl.conf" ]; then
 	msg "Setting kernel runtime parameters..."
 	/sbin/sysctl -q -p
-	check_retval
 fi
 
 # Loads required modules
 if [ "${#MODULES[@]}" -gt 0 ]; then
 	msg "Loading modules..."
 	for modules in ${MODULES[@]}; do
-		/sbin/modprobe $modules 2>/dev/null && echo -ne " ${BLUE}$modules${NORM}" || echo -ne " ${RED}$modules${NORM}"
+		/sbin/modprobe $modules
 	done
-	stat_done
 fi
 
 # Populates /dev with device nodes
@@ -46,7 +45,6 @@ msg "Populating /dev with device nodes..."
 /sbin/udevadm trigger --action=add    --type=devices
 /sbin/udevadm trigger --action=change --type=devices
 /sbin/udevadm settle
-check_retval
 
 # If any LVM based partitions are on the system, ensure they
 # are activated so they can be used.
@@ -57,27 +55,22 @@ fi
 # Enable swap
 msg "Activating all swap files/partitions..."
 /sbin/swapon -a
-check_retval
 
 msg "Setting hardware clock..."
 case "$CLOCK" in
 	UTC|utc)
-		echo -ne " ${BLUE}utc${NORM}"
 		/sbin/hwclock --hctosys --utc
 	;;
 	LOCAL|local|LOCALTIME|localtime)
-		echo -ne " ${BLUE}localtime${NORM}"
 		/sbin/hwclock --hctosys --localtime
 	;;
 esac
-check_retval
 
 msg "Mounting root file system in read-only mode..."
 /bin/mount -n -o remount,ro /
-check_retval
 
 msg "Checking filesystems..."
-/sbin/fsck -A -a -C -T >/dev/null
+/sbin/fsck -A -a -C -T
 if [ $? -gt 0 ]; then
    echo
    echo "ERROR:"
@@ -90,20 +83,16 @@ if [ $? -gt 0 ]; then
    /sbin/sulogin
    /bin/umount -a -r
    /sbin/reboot -f
-else
-	stat_done
 fi
 
 msg "Remounting root file system in read-write mode..."
 /bin/mount --options remount,rw /
-check_retval
 
 # Make sure /dev/pts exists
 /bin/mkdir -p /dev/pts
 
 msg "Mounting remaining file systems..."
 mount --all --test-opts no_netdev >/dev/null
-check_retval
 
 # Clean filesystem
 msg "Cleaning file systems..."
@@ -114,54 +103,44 @@ if grep -q '^utmp:' /etc/group; then
   /bin/chmod 664 /var/run/utmp
   /bin/chgrp utmp /var/run/utmp
 fi
-check_retval
 
 #msg "Setting up Linux console..."
 if [ "$FONT" ] && [ "$FONT" != "default" ]; then
 	msg "Setting font to ${BLUE}$FONT${NORM}"
 	/usr/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
-	check_retval
 fi
 if [ "$KEYMAP" ]; then
-	msg "Setting keyboard to ${BLUE}$KEYMAP${NORM}"
+	msg "Setting keyboard to ${KEYMAP}"
 	/usr/bin/loadkeys -q $KEYMAP
-	check_retval
 fi
 
 msg "Bringing up the loopback interface..."
 ip addr add 127.0.0.1/8 label lo dev lo
 ip link set lo up
-check_retval
 
 HOSTNAME=`cat /etc/hostname`
-msg "Setting hostname to ${BLUE}${HOSTNAME}${NORM}"
+msg "Setting hostname to ${HOSTNAME}"
 /bin/hostname ${HOSTNAME}
-check_retval
 
 msg "Starting system log daemons..."
 /sbin/syslogd
-check_retval
 
 msg "Starting kernel log daemon..."
 /sbin/klogd -c3
-check_retval
 
 if [ -f "/etc/random-seed" ]; then
   msg "Initializing random number generator..."
   /bin/cat /etc/random-seed >/dev/urandom
   /bin/rm -f /etc/random-seed
-  check_retval
 fi
 
 # Configure system timezone
 if [ "$TIMEZONE" ]; then
-	msg "Setting timezone to ${BLUE}$TIMEZONE${NORM}"
+	msg "Setting timezone to ${TIMEZONE}"
 	/bin/ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-	check_retval
 fi
 
 msg "Updating module dependencies..."
 /sbin/depmod -a
-check_retval
 
 # End of file

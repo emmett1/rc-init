@@ -2,7 +2,6 @@
 
 # Load configuration and functions
 . /etc/rc.conf
-. /etc/conf.d/functions
 
 # Start daemons
 if [ "${#DAEMONS[@]}" -gt 0 ]; then

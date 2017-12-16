@@ -2,7 +2,10 @@
 
 # Load configuration and functions
 . /etc/rc.conf
-. /etc/conf.d/functions
+
+msg() {
+	echo " * $@"
+}
 
 if [ "$PREVLEVEL" = "2" ]; then
 	# Stopping daemons reversely
@@ -19,21 +22,17 @@ fi
 
 msg "Sending all processes the TERM signal..."
 /sbin/killall5 -15
-check_retval
 sleep 1
 
 msg "Sending all processes the KILL signal..."
 /sbin/killall5 -9
-check_retval
 sleep 1
 
 msg "Deactivating swap partitions..."
 /sbin/swapoff -a
-check_retval
 
 msg "Saving random seed to a temporary file..."
 /bin/dd if=/dev/urandom of=/etc/random-seed count=1 bs=512 2>/dev/null
-check_retval
 
 msg "Saving the system time to hardware clock..."
 case "$CLOCK" in
@@ -44,22 +43,18 @@ case "$CLOCK" in
 		/sbin/hwclock --systohc --localtime
 	;;
 esac
-check_retval
 
 # Write to wtmp file before unmounting
 /sbin/halt -w
 
 msg "Unmounting remote filesystems..."
 umount -a -d -r -t notmpfs,nosysfs,nodevtmpfs,noproc,nodevpts
-check_retval
 
 msg "Remounting root filesystem read-only..."
 /bin/mount -n -o remount,ro /
-check_retval
 
 msg "Flushing filesystem buffers..."
 /bin/sync
-check_retval
 
 # Power off or reboot
 if [ "$RUNLEVEL" = "0" ]; then

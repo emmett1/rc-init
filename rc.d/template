@@ -3,9 +3,8 @@
 # /etc/rc.d/template: start/stop template
 #
 
-# Load configuration and functions
-. /etc/rc.conf
-. /etc/conf.d/functions
+# Load daemon configuration
+. /etc/conf.d/daemonconf
 
 NAME="template daemon"
 PROG=/usr/bin/foo
@@ -16,22 +15,20 @@ PIDFILE=/var/run/$PROGNAME.pid
 
 case $1 in
 	start)
-		msg "Starting $NAME..."
+		echo "Starting $NAME..."
 		if [ "$PROCPID" ]; then
 			exit
 		fi
 		$PROG $OPTS
-		check_retval
 		;;
 	stop)
-		msg "Stopping $NAME..."
+		echo "Stopping $NAME..."
 		if [ "$PROCPID" ]; then
 			for pid in $PROCPID; do
 				kill "$pid"
 			done
 		fi
 		rm -f $PIDFILE
-		check_retval
 		;;
 	restart)
 		$0 stop
