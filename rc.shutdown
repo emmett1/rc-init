@@ -13,9 +13,11 @@ if [ "$PREVLEVEL" = "2" ]; then
 		for daemon in "${DAEMONS[@]}"; do
 			R_DAEMONS=($daemon ${R_DAEMONS[@]})
 		done
-		echo "Stopping daemon:"
+		echo "Stopping daemons:"
 		for daemon in "${R_DAEMONS[@]}"; do
-			/etc/rc.d/$daemon stop
+			if [ -f /etc/rc.d/$daemon ]; then
+				/etc/rc.d/$daemon stop
+			fi
 		done
 	fi
 fi

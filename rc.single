@@ -4,14 +4,16 @@
 . /etc/rc.conf
 
 if [ "$PREVLEVEL" = "2" ]; then
-	# Stopping services reversely
-	if [ "${SERVICES[*]}" ]; then
-		for service in "${SERVICES[@]}"; do
-			R_SERVICES=($service ${R_SERVICES[@]})
+	# Stopping daemons reversely
+	if [ "${DAEMONS[*]}" ]; then
+		for daemon in "${DAEMONS[@]}"; do
+			R_DAEMONS=($daemon ${R_DAEMONS[@]})
 		done
-		echo "Stopping service:"
-		for service in "${R_SERVICES[@]}"; do
-			/etc/rc.d/$service stop
+		echo "Stopping daemons:"
+		for daemon in "${R_DAEMONS[@]}"; do
+			if [ -f /etc/rc.d/$daemon ]; then
+				/etc/rc.d/$daemon stop
+			fi
 		done
 	fi
 fi
