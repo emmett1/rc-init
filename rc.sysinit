@@ -101,9 +101,9 @@ msg "Mounting remaining file systems..."
 
 # Clean filesystem
 msg "Cleaning file systems..."
-(cd /var/run && /usr/bin/find . -name "*.pid" -delete)
-(cd /var/lock && /usr/bin/find . ! -type d -delete)
-(cd /tmp && /usr/bin/find . -xdev -mindepth 1 ! -name lost+found -delete)
+(cd /var/run && /bin/find . -name "*.pid" -delete)
+(cd /var/lock && /bin/find . ! -type d -delete)
+(cd /tmp && /bin/find . -xdev -mindepth 1 ! -name lost+found -delete)
 /bin/mkdir -m 1777 /tmp/.ICE-unix
 
 /usr/bin/touch /var/run/utmp
