@@ -5,7 +5,6 @@
 
 # Start daemons
 if [ "${#DAEMONS[@]}" -gt 0 ]; then
-	echo "Starting daemons:"
 	for daemon in ${DAEMONS[@]}; do
 		if [ -f /etc/rc.d/$daemon ]; then
 			/etc/rc.d/$daemon start
