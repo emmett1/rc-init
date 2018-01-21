@@ -115,11 +115,11 @@ fi
 #msg "Setting up Linux console..."
 if [ "$FONT" ] && [ "$FONT" != "default" ]; then
 	msg "Setting font to ${BLUE}$FONT${NORM}"
-	/usr/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
+	/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
 fi
 if [ "$KEYMAP" ]; then
 	msg "Setting keyboard to ${KEYMAP}"
-	/usr/bin/loadkeys -q $KEYMAP
+	/bin/loadkeys -q $KEYMAP
 fi
 
 msg "Bringing up the loopback interface..."
