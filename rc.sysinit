@@ -112,7 +112,7 @@ if grep -q '^utmp:' /etc/group; then
   /bin/chgrp utmp /var/run/utmp
 fi
 
-#msg "Setting up Linux console..."
+# Setting up Linux console
 if [ "$FONT" ] && [ "$FONT" != "default" ]; then
 	msg "Setting font to ${BLUE}$FONT${NORM}"
 	/bin/setfont "/usr/share/kbd/consolefonts/$FONT.psf.gz"
@@ -140,12 +140,6 @@ if [ -f "/etc/random-seed" ]; then
   msg "Initializing random number generator..."
   /bin/cat /etc/random-seed >/dev/urandom
   /bin/rm -f /etc/random-seed
-fi
-
-# Configure system timezone
-if [ "$TIMEZONE" ]; then
-	msg "Setting timezone to ${TIMEZONE}"
-	/bin/ln -snf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 fi
 
 msg "Updating module dependencies..."
