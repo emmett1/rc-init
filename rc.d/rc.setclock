@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.setclock
+#
+
+[ -r /etc/conf.d/clock ] && . /etc/conf.d/clock
+
+
+case "${UTC}" in
+   yes|true|1)
+      CLOCKPARAMS="${CLOCKPARAMS} --utc"
+      ;;
+
+   no|false|0)
+      CLOCKPARAMS="${CLOCKPARAMS} --localtime"
+      ;;
+
+esac
+
+case ${1} in
+   start)
+      hwclock --hctosys ${CLOCKPARAMS} >/dev/null
+      ;;
+
+   stop)
+      echo "Setting hardware clock..."
+      hwclock --systohc ${CLOCKPARAMS} >/dev/null
+      ;;
+
+   *)
+      echo "Usage: ${0} {start|stop}"
+      exit 1
+      ;;
+
+esac
+
+# End of file

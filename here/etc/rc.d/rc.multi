@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.multi: Multi-user mode script
+
+# Start sysklog daemon
+if [ -x /etc/rc.d/rc.sysklogd ]; then
+	/etc/rc.d/rc.sysklogd start
+fi
+
+# Start D-Bus
+if [ -x /etc/rc.d/rc.dbus ]; then
+	/etc/rc.d/rc.dbus start
+fi
+
+# Start display manager
+if [ -x /etc/rc.d/rc.lxdm ]; then
+	/etc/rc.d/rc.lxdm start
+elif [ -x /etc/rc.d/rc.lightdm ]; then
+	/etc/rc.d/rc.lightdm start
+fi
+
+# Start network
+if [ -x /etc/rc.d/rc.networkmanager ]; then
+	/etc/rc.d/rc.networkmanager start
+elif [ -x /etc/rc.d/rc.network ]; then
+	/etc/rc.d/rc.network start
+fi
+
+# Restore alsa sound state
+if [ -x /etc/rc.d/rc.alsa ]; then
+	/etc/rc.d/rc.alsa start
+fi
+
+# Start bluetooth daemon
+if [ -x /etc/rc.d/rc.bluetooth ]; then
+	/etc/rc.d/rc.bluetooth start
+fi
+
+# Start gpm server
+if [ -x /etc/rc.d/rc.gpm ]; then
+	/etc/rc.d/rc.gpm start
+fi
+
+# Start cups daemon
+if [ -x /etc/rc.d/rc.cups ]; then
+	/etc/rc.d/rc.cups start
+fi
+
+# Start apache daemon
+if [ -x /etc/rc.d/rc.httpd ]; then
+	/etc/rc.d/rc.httpd start
+fi
+
+# Start ntp daemon
+if [ -x /etc/rc.d/rc.ntpd ]; then
+	/etc/rc.d/rc.ntpd start
+fi
+
+# Start rsync daemon
+if [ -x /etc/rc.d/rc.rsyncd ]; then
+	/etc/rc.d/rc.rsyncd start
+fi
+
+# Start smartmontools daemon
+if [ -x /etc/rc.d/rc.smartd ]; then
+	/etc/rc.d/rc.smartd start
+fi
+
+# End of file

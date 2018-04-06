@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.local
+#
+# You can add your startup command here
+# or custom rc scripts.
+#
+# Example:
+# 
+# if [ -x /etc/rc.d/rc.myscripts ]; then
+#	/etc/rc.d/rc.myscripts
+# fi
+#
+
+# End of file

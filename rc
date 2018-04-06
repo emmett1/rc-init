@@ -1,0 +1,168 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc : System initialization script
+#
+
+# Make sure /run is available before logging any messages
+if ! mountpoint /run >/dev/null; then
+	mount /run
+fi
+
+mkdir -p /run/lock /run/shm
+chmod 1777 /run/shm /run/lock
+
+echo -n "Mounting virtual file systems: /run" 
+
+if ! mountpoint /proc >/dev/null; then
+	echo -n " /proc"
+	mount -o nosuid,noexec,nodev /proc
+fi
+
+if ! mountpoint /sys >/dev/null; then
+	echo -n " /sys" 
+	mount -o nosuid,noexec,nodev /sys
+fi
+
+if ! mountpoint /dev >/dev/null; then
+	echo -n " /dev" 
+	mount -o mode=0755,nosuid /dev
+fi
+echo
+
+ln -sfn /run/shm /dev/shm
+
+# Execute rc.modules
+if [ -x /etc/rc.d/rc.modules ]; then
+	/etc/rc.d/rc.modules
+fi
+
+# Initialize network loopback interface and set hostname
+if [ -x /etc/rc.d/rc.localnet ]; then
+	/etc/rc.d/rc.localnet start
+fi
+
+# Start udev
+if [ -x /etc/rc.d/rc.udev ]; then
+	/etc/rc.d/rc.udev
+fi
+
+# Activate swap
+if [ -x /etc/rc.d/rc.swap ]; then
+	/etc/rc.d/rc.swap start
+fi
+
+if [ -f /fastboot ]; then
+ msg="/fastboot found, will omit "
+ msg="${msg} file system checks as requested.\n"
+ echo "${msg}"
+ exit 0
+fi
+
+echo "Mounting root file system in read-only mode... "
+mount -n -o remount,ro / >/dev/null
+
+if [ ${?} != 0 ]; then
+ msg="\n\nCannot check root "
+ msg="${msg}filesystem because it could not be mounted "
+ msg="${msg}in read-only mode.\n\n"
+ msg="${msg}After 20 second, this system will be "
+ msg="${msg}halted and powered off.\n\n"
+ echo "${msg}"
+ sleep 20
+ halt -d -f -i -p
+fi
+
+if [ -f /forcefsck ]; then
+ msg="/forcefsck found, forcing file" 
+ msg="${msg} system checks as requested."
+ echo "$msg"
+ options="-f"
+else
+ options=""
+fi
+
+echo "Checking file systems..."
+fsck ${options} -a -A -C -T >/dev/null
+
+if [ "$?" = 1 ]; then
+ msg="\nWARNING:\n\nFile system errors "
+ msg="${msg}were found and have been corrected.\n"
+ msg="${msg}     You may want to double-check that "
+ msg="${msg}everything was fixed properly."
+ echo "$msg"
+fi
+
+if [ "$?" = 2 -o "$?" = 3 ]; then
+ msg="\nWARNING:\n\nFile system errors "
+ msg="${msg}were found and have been been "
+ msg="${msg}corrected, but the nature of the "
+ msg="${msg}errors require this system to be rebooted.\n\n"
+ msg="${msg}After 20 second, "
+ msg="${msg}this system will be rebooted\n\n"
+ echo "$msg"
+ sleep 20
+ reboot -f
+fi
+
+if [ "$?" -gt 3 -a "$?" -lt 16 ]; then
+ msg="\nFAILURE:\n\nFile system errors "
+ msg="${msg}were encountered that could not be "
+ msg="${msg}fixed automatically.\nThis system "
+ msg="${msg}cannot continue to boot and will "
+ msg="${msg}therefore be halted until those "
+ msg="${msg}errors are fixed manually by a "
+ msg="${msg}System Administrator.\n\n"
+ msg="${msg}After 20 second, this system will be "
+ msg="${msg}halted and powered off.\n\n"
+ echo "$msg"
+ sleep 20
+ halt -d -f -i -p
+fi
+
+if [ "$?" -ge 16 ]; then
+ msg="FAILURE:\n\nUnexpected failure "
+ msg="${msg}running fsck.  Exited with error "
+ msg="${msg} code: ${error_value}.\n"
+ echo $msg
+ exit $?
+fi
+
+# Mount filesystem
+if [ -x /etc/rc.d/rc.mountfs ]; then
+	/etc/rc.d/rc.mountfs start
+fi
+
+echo -n "Cleaning file systems:" 
+
+#if [ "${SKIPTMPCLEAN}" = "" ]; then
+	echo " /tmp" 
+	cd /tmp &&
+	find . -xdev -mindepth 1 ! -name lost+found -delete
+	/bin/mkdir -m 1777 /tmp/.ICE-unix
+#fi
+
+> /var/run/utmp
+
+if grep -q '^utmp:' /etc/group ; then
+	chmod 664 /var/run/utmp
+	chgrp utmp /var/run/utmp
+fi
+
+if [ -f "/etc/sysctl.conf" ]; then
+	echo "Setting kernel runtime parameters..."
+	sysctl -q -p
+fi
+
+if [ -f "/etc/random-seed" ]; then
+  echo "Initializing random number generator..."
+  /bin/cat /etc/random-seed >/dev/urandom
+  rm -f /etc/random-seed
+fi
+
+
+# Setting clock
+if [ -x /etc/rc.d/rc.setclock ]; then
+	/etc/rc.d/rc.setclock start
+fi
+
+# End of file

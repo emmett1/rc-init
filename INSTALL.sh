@@ -1,12 +1,12 @@
 #!/bin/bash
 
-BIN_DIR=/usr/bin
 RC_DIR=/etc
 RCD_DIR=/etc/rc.d
 RCCONF_DIR=/etc/conf.d
 
-mkdir -pv ${DESTDIR}{${RC_DIR},${RCD_DIR},${RCCONF_DIR},${BIN_DIR}}
+mkdir -pv ${DESTDIR}{${RC_DIR},${RCD_DIR},${RCCONF_DIR}}
 
-install -m755 rc-init ${DESTDIR}${BIN_DIR}
-install -m644 inittab rc.conf ${DESTDIR}${RC_DIR}
-install -m754 sysinit{,.local} ${DESTDIR}${RC_DIR}
+install -m644 inittab ${DESTDIR}${RC_DIR}
+install -m754 rc ${DESTDIR}${RC_DIR}
+install -m754 rc.d/rc.{localnet,modules,mountfs,multi,setclock,shutdown,single,swap,sysklogd,udev} ${DESTDIR}${RCD_DIR}
+install -m644 conf.d/{clock,modules} ${DESTDIR}${RCCONF_DIR}
