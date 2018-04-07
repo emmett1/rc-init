@@ -66,4 +66,9 @@ if [ -x /etc/rc.d/rc.smartd ]; then
 	/etc/rc.d/rc.smartd start
 fi
 
+# Start rc.local script
+if [ -x /etc/rc.d/rc.local ]; then
+	/etc/rc.d/rc.local
+fi
+
 # End of file
