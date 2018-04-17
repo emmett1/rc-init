@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /etc/conf.d/console
+
+# See if we need to do anything
+if [ -z "${KEYMAP}" ] && [ -z "${KEYMAP}" ]; then 
+   exit 0
+fi
+
+echo "Setting up Linux console..."
+
+[ -z "${FONT}" ] || setfont ${FONT}
+[ -z "${KEYMAP}" ] || loadkeys ${KEYMAP} >/dev/null 2>&1
+
+# End of file

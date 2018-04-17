@@ -153,12 +153,16 @@ if [ -f "/etc/sysctl.conf" ]; then
 	sysctl -q -p
 fi
 
+# Setting linux console
+if [ -x /etc/rc.d/rc.console ]; then
+	/etc/rc.d/rc.console
+fi
+
 if [ -f "/etc/random-seed" ]; then
   echo "Initializing random number generator..."
   /bin/cat /etc/random-seed >/dev/urandom
   rm -f /etc/random-seed
 fi
-
 
 # Setting clock
 if [ -x /etc/rc.d/rc.setclock ]; then

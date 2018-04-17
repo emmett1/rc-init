@@ -1,0 +1,8 @@
+#
+# /etc/conf.d/console: Font and keymap config
+#
+
+KEYMAP=""
+FONT=""
+
+# End of file
